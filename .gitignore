@@ -7,3 +7,5 @@ figures/
 data/
 analytical.notes/
 test/
+.DS_Store
+Null Model.Rproj
