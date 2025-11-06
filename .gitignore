@@ -1,0 +1,9 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+update.slides/
+figures/
+data/
+analytical.notes/
+test/
