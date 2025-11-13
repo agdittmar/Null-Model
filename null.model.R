@@ -25,9 +25,9 @@ params <- list(
 )
 
 # set parameter to vary
-damage.vector <- rep((1:15) / 100, each = n_runs)
-
-
+# damage.vector <- rep((1:15) / 100, each = n_runs)
+# damage.vector <- rep(c(seq(0.1,0.9,by=0.1), 0.95,0.98),each = n_runs )
+damage.vector <- rep(c((1:15) / 100, seq(0.2,0.8,by=0.1), (85:99) / 100), each = n_runs)
 
 #### function to set up leaf sizes ####
 # the input for this function is a list of parameters and one of the levels of variation in leaf size (see below)
@@ -290,7 +290,7 @@ run.sim <- function(jj) {
   # initialize leaves and assign damage to them
   # change leaf.var and dam.var for different levels of variation (see above functions)
   leaf.data = initialize.leaves(leaf.var = 1, prms = params)
-  leaf.data = damage.fun(dam.var = 2, prms = params, leaf.data = leaf.data)
+  leaf.data = damage.fun(dam.var = 1, prms = params, leaf.data = leaf.data)
   
   # calculate final size and percent damage
   leaf.data$fin.size = leaf.data$init.size - leaf.data$damage
@@ -310,7 +310,7 @@ output <- lapply(1:length(damage.vector), run.sim)
 
 # merge all data into one dataframe and save to computer
 leaf.data <- do.call("rbind", output)
-save(leaf.data, file=file.path("data/var.bites", "largeleaves.noleafvar.RData")) # change the name and file path to match your computer
+save(leaf.data, file=file.path("test", "largeleaves.noleafvar.bigrange.RData")) # change the name and file path to match your computer
 
 
 
@@ -341,7 +341,7 @@ plant.data$low.dam <- aggregate(leaf.data$pct.damage <= 0.05, by = list(plant.id
                                                                     pct.damage = leaf.data$dam.mean), FUN = sum)$x / n_leaves
 
 # save file
-save(plant.data, file = file.path("data/var.bites", "largeleaves.noleafvar.plants.RData"))
+save(plant.data, file = file.path("test", "largeleaves.noleafvar.bigrange.plants.RData"))
 
 
 
@@ -366,7 +366,7 @@ pop.data$low.dam.leaves <- aggregate(leaf.data$pct.damage <= 0.05, by = list(pop
 pop.data$no.dam.plants <- aggregate(plant.data$pct.damage == 0, by = list(pop.id = plant.data$pop.id, run.number = plant.data$run.number, mean.damage = plant.data$mean.damage), FUN = sum)$x / n_plants
 pop.data$low.dam.plants <- aggregate(plant.data$pct.damage <= 0.05, by = list(pop.id = plant.data$pop.id, run.number = plant.data$run.number, mean.damage = plant.data$mean.damage), FUN = sum)$x / n_plants
 
-save(pop.data, file = file.path("data/var.bites", "largeleaves.noleafvar.pops.RData"))
+save(pop.data, file = file.path("test", "largeleaves.noleafvar.bigrange.pops.RData"))
 
 
 
@@ -399,11 +399,11 @@ hist(subset(plant.data, mean.damage == 0.15)$pct.damage, main = "", xlab = "Aver
 hist(subset(pop.data, mean.damage == 0.15)$pct.damage, main = "", xlab = "Average Percent Damage (population)")
 
 # plot plant data
-ggplot(data = plant.data, aes(x = as.factor(mean.damage), y = pct.dam.cv)) +
+ggplot(data = plant.data, aes(x = as.factor(mean.damage), y = pct.dam.gini)) +
   geom_boxplot() +
   # geom_jitter(alpha = 0.1, size = 0.4) +
-  xlab("Mean Percent Damage") +
-  ylab("Coefficient of Variation") +
+  xlab("Percent Damage") +
+  ylab("Gini Coefficient") +
   gg_options()
 
 ggplot(data = plant.data) +
@@ -449,3 +449,21 @@ ggplot(data = pop.data, aes(x = mean.damage, y = no.dam, group = mean.damage)) +
 
 ggplot(data = pop.data, aes(x = mean.damage, y = low.dam, group = mean.damage)) +
   geom_boxplot()
+
+
+
+
+#### plot means and quartiles ####
+means <- aggregate(na.omit(plant.data)$pct.dam.gini, by = list(na.omit(plant.data)$mean.damage), mean)
+names(means) <- c("mean.damage", "mean.gini")
+
+means$gini.quant25 <- aggregate(na.omit(plant.data)$pct.dam.gini, by = list(na.omit(plant.data)$mean.damage), FUN = quantile, probs = 0.05)$x
+means$gini.quant75 <- aggregate(na.omit(plant.data)$pct.dam.gini, by = list(na.omit(plant.data)$mean.damage), FUN = quantile, probs = 0.95)$x
+
+ggplot(data = means) +
+  geom_line(aes(x = mean.damage, y = mean.gini)) +
+  geom_ribbon(aes(x = mean.damage, ymin = gini.quant25, ymax = gini.quant75), alpha = 0.25, linetype = "dashed") +
+  xlab("Population Percent Damage") +
+  ylab("Mean Gini Coefficient") +
+  ylim(c(0,1)) +
+  gg_options()
